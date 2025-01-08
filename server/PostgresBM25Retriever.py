@@ -41,9 +41,11 @@ class PostgresBM25Retriever(BaseRetriever):
             BEGIN
                 IF NOT EXISTS (
                     SELECT 1
-                    FROM pg_indexes
-                    WHERE schemaname = 'public'
-                    AND indexname = '{self.table_name}_bm25'
+                    FROM pg_class c
+                    JOIN pg_namespace n ON n.oid = c.relnamespace
+                    WHERE c.relname = lower('{self.table_name}_bm25_bm25_index')
+                    AND n.nspname = 'public'
+                    AND c.relkind = 'i'
                 ) THEN
                     CALL paradedb.create_bm25(
                         index_name => '{self.table_name}_bm25',
