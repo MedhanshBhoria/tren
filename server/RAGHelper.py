@@ -526,7 +526,7 @@ class RAGHelper:
         self.db.add_documents(documents, ids=ids)
 
         if self.vector_store == "postgres":
-            self.sparse_retriever.add_documents(new_chunks, ids)
+            self.sparse_retriever.add_documents(documents, ids)
         else:
             # Recreate the in-memory store
             self._initialize_bm25retriever()
