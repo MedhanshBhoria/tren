@@ -520,8 +520,9 @@ class RAGHelper:
         if not self.db:
             self._initialize_vector_store()
 
-        documents = [d for d in new_chunks]
-        ids = [d.metadata["id"] for d in new_chunks]
+        # Deduplicate to prevent conflicts
+        documents = list({d.metadata["id"]: d for d in new_chunks}.values())
+        ids = [d.metadata["id"] for d in documents]
         self.db.add_documents(documents, ids=ids)
 
         if self.vector_store == "postgres":
