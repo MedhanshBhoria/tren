@@ -223,7 +223,7 @@ class RAGHelperCloud(RAGHelper):
                 user_query
             )  # Assume this fetches graph DB docs
             context_retriever = (
-                self.ensemble_retriever if self.rerank else self.rerank_retriever
+                self.rerank_retriever if self.rerank else self.ensemble_retriever
             )
             retriever_chain = {
                 "retriever_docs": context_retriever,  # Lazy retrieval from context retriever
