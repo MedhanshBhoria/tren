@@ -46,6 +46,7 @@
     var chathistory = [];
     var documents = [];
     var sessionid = uuidv4();
+    var messageOffset = 0;
 
     $.ajaxSetup({
         beforeSend: function(xhr) {
@@ -68,7 +69,7 @@
         })).replace(/\\n/g, "<br />");
     }
 
-    function addMessage(message, isHuman) {
+    function addMessage(message, isHuman, data) {
         var dialogue = $("#dialogue");
         var row = $('<div>').addClass('row');
         var col;
@@ -87,25 +88,44 @@
         $(container).append(label);
 
         if (!isHuman) {
-          var feedbackPos = $('<i class="fa-regular fa-thumbs-up" style="color: #999; font-size: 1.5em; padding-right: 5px;"></i>');
-          var feedbackNeg = $('<i class="fa-regular fa-thumbs-down" style="color: #999; font-size: 1.5em; "></i>');
-          $(feedbackPos).on('click', function() {
+          var feedbackPos = $('<i class="fa-regular fa-thumbs-up" style="color: #438c4f; font-size: 1.5em; padding-right: 5px; cursor: pointer;"></i>');
+          var feedbackNeg = $('<i class="fa-regular fa-thumbs-down" style="color: #a15047; font-size: 1.5em; cursor: pointer;"></i>');
+
+          const currentOffset = messageOffset;
+          function handleFeedback(feedbackType) {
             $.post({
               url: "@controllers.routes.HomeController.feedback()",
-              data: JSON.stringify(),
+              data: JSON.stringify({
+                chat_id: sessionid,
+                message_offset: currentOffset,
+                feedback: feedbackType === "positive",
+              }),
               contentType: "application/json; charset=utf-8",
               dataType: "json"
             })
-            .done(function(response) {
-              console.log("Success:", response);
-            })
-            .fail(function(xhr, status, error) {
-              console.error("Error:", error);
-            });
+            .done(function() {
+              // Display thank-you message
+              var message = $('<span style="margin-left: 10px; font-weight: bold; white-space: nowrap;">Thank you for your feedback!</span>');
+              feedbackRow.append($("<div class='col-md-1 offset-11 d-flex justify-content-end'>").append(message));
 
-          });
-          $(feedbackNeg).on('click', function() {
-          });
+              // Highlight the clicked button and disable both
+              if (feedbackType === "positive") {
+                // Disable both buttons highlighting the positive one
+                feedbackPos.css("pointer-events", "none").css("opacity", "0.8");
+                feedbackNeg.css("pointer-events", "none").css("opacity", "0.3");
+              } else {
+                // Disable both buttons highlighting the negative one
+                feedbackPos.css("pointer-events", "none").css("opacity", "0.3");
+                feedbackNeg.css("pointer-events", "none").css("opacity", "0.8");
+              }
+            })
+            .fail(function() {
+              alert("An error occurred. Please try again later.");
+            });
+          }
+          feedbackPos.on('click', function() { handleFeedback("positive"); });
+          feedbackNeg.on('click', function() { handleFeedback("negative"); });
+
           var feedbackRow = $("<div class='row'>")
             .append($("<div class='col-md-1 offset-11'>")
               .append(feedbackPos)
@@ -118,6 +138,7 @@
         $(row).append(col);
         $(dialogue).append(row);
         dialogue.scrollTop(dialogue[0].scrollHeight);
+        messageOffset += 1;
     }
 
     function presentDocuments(documents) {
@@ -228,6 +249,8 @@
             type: "POST",
             url: "@controllers.routes.HomeController.search()",
             data: JSON.stringify({
+              id: sessionid,
+              message_offset: messageOffset,
               query: query,
               history: chathistory,
               docs: documents

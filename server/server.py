@@ -110,20 +110,6 @@ class LongDistanceInformationExtraction:
         """Determine if the metric evaluation was successful."""
         return self.passed
 
-
-# Default metric configurations
-llm_model = os.getenv("llm_model", "gpt-3.5-turbo")
-metrics = [
-    AnswerRelevancyMetric(threshold=0.7, model=llm_model),
-    FaithfulnessMetric(threshold=0.7, model=llm_model),
-    ContextualPrecisionMetric(threshold=0.7, model=llm_model),
-    ContextualRecallMetric(threshold=0.7, model=llm_model),
-    ContextualRelevancyMetric(threshold=0.7, model=llm_model),
-    HallucinationMetric(threshold=0.5, model=llm_model),
-    ToolCorrectnessMetric(threshold=0.5),
-    CounterfactualErrorHandling(threshold=0.7),
-    LongDistanceInformationExtraction(threshold=0.7, distance_threshold=50)
-]
 # Initialize Flask application
 app = Flask(__name__)
 
@@ -186,6 +172,20 @@ def deepeval_evaluate():
     Endpoint to run DeepEval evaluation logic.
     Expects JSON input specifying evaluation parameters.
     """
+    # Default metric configurations
+    llm_model = os.getenv("llm_model", "gpt-3.5-turbo")
+    metrics = [
+        AnswerRelevancyMetric(threshold=0.7, model=llm_model),
+        FaithfulnessMetric(threshold=0.7, model=llm_model),
+        ContextualPrecisionMetric(threshold=0.7, model=llm_model),
+        ContextualRecallMetric(threshold=0.7, model=llm_model),
+        ContextualRelevancyMetric(threshold=0.7, model=llm_model),
+        HallucinationMetric(threshold=0.5, model=llm_model),
+        ToolCorrectnessMetric(threshold=0.5),
+        CounterfactualErrorHandling(threshold=0.7),
+        LongDistanceInformationExtraction(threshold=0.7, distance_threshold=50)
+    ]
+
     json_data = request.get_json()
     sample_size = int(json_data.get("sample_size", 10))
     qa_pairs_count = int(json_data.get("qa_pairs", 5))
@@ -385,10 +385,5 @@ def delete_document():
     return jsonify({"count": result.delete_count})
 
 
-public_url = ngrok.connect(5000)
-print(f" * Tunnel URL: {public_url}")
-
-if __name__ == '__main__':
-    public_url = ngrok.connect(5000)
-    logger.info(f"Public URL: {public_url}")
-    app.run(port=5000)
+if __name__ == "__main__":
+    app.run(host="0.0.0.0")

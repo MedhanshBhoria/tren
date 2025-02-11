@@ -1,5 +1,7 @@
 package controllers
 
+import models.{ChatLog, Feedback}
+import models.daos.{ChatlogDAO, FeedbackDAO}
 import org.apache.pekko.stream.scaladsl.{FileIO, Source}
 
 import javax.inject._
@@ -21,7 +23,9 @@ import scala.language.postfixOps
 class HomeController @Inject()(
     cc: ControllerComponents,
     config: Configuration,
-    ws: WSClient
+    ws: WSClient,
+    chatlogDAO: ChatlogDAO,
+    feedbackDAO: FeedbackDAO
 ) (implicit ec: ExecutionContext) extends AbstractController(cc) {
 
   def index() = Action { implicit request: Request[AnyContent] =>
@@ -43,6 +47,8 @@ class HomeController @Inject()(
     val query = (json \ "query").as[String]
     val history = (json \ "history").as[Seq[JsObject]]
     val docs = (json \ "docs").as[Seq[JsObject]]
+    val chatId = (json \ "id").as[String]
+    val messageOffset = (json \ "message_offset").as[Int]
 
     ws
       .url(s"${config.get[String]("server_url")}/chat")
@@ -52,9 +58,16 @@ class HomeController @Inject()(
         "history" -> history,
         "docs" -> docs
       ))
-      .map(response =>
-          Ok(response.json)
-      )
+      .flatMap(response => {
+        val responseJson = response.json
+        chatlogDAO.addMessage(ChatLog(
+          chatId, messageOffset, query, "user", (responseJson \ "reply").as[String],
+          Json.stringify((responseJson \ "documents").as[JsValue]), (responseJson \ "rewritten").as[Boolean],
+          query, (responseJson \ "fetched_new_documents").as[Boolean]
+        )).map {_ =>
+          Ok(responseJson)
+        }
+      })
   }
 
   def download(file: String) = Action.async { implicit request: Request[AnyContent] =>
@@ -152,7 +165,12 @@ class HomeController @Inject()(
       }
   }
 
-  def feedback() = Action { implicit request: Request[AnyContent] =>
-    Ok(Json.obj())
+  def feedback() = Action.async { implicit request: Request[AnyContent] =>
+    val json = request.body.asJson.get.as[JsObject]
+    feedbackDAO.add(Feedback(
+      (json \ "chat_id").as[String],
+      (json \ "message_offset").as[Int],
+      (json \ "feedback").as[Boolean]
+    )).map {_ => Ok(Json.obj())}
   }
 }

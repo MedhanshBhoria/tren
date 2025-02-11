@@ -35,20 +35,20 @@ class SQLTables @Inject() (@NamedDatabase("ragmeup") protected val dbConfigProvi
     def role = column[String]("role")
     def reply = column[String]("reply")
     def documents = column[String]("documents")
-    def rewritten = column[Int]("rewritten")
+    def rewritten = column[Boolean]("rewritten")
     def question = column[String]("question")
-    def fetchedNewDocuments = column[Int]("fetched_new_documents")
+    def fetchedNewDocuments = column[Boolean]("fetched_new_documents")
 
-    def * = (id, messageOffset, text, role, reply, documents, rewritten == 1, question, fetchedNewDocuments == 1).mapTo[ChatLog]
+    def * = (id, messageOffset, text, role, reply, documents, rewritten, question, fetchedNewDocuments).mapTo[ChatLog]
   }
   val ChatLogs = TableQuery[ChatLogTable]
 
   class FeedbackTable(tag: Tag) extends Table[Feedback](tag, "feedback") {
-    def id = column[String]("id")
+    def id = column[String]("chat_id")
     def messageOffset = column[Int]("message_offset")
-    def feedback = column[Int]("feedback")
+    def feedback = column[Boolean]("feedback")
 
-    def * = (id, messageOffset, feedback == 1).mapTo[Feedback]
+    def * = (id, messageOffset, feedback).mapTo[Feedback]
   }
   val Feedbacks = TableQuery[FeedbackTable]
 }

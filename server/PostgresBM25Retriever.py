@@ -32,7 +32,7 @@ class PostgresBM25Retriever(BaseRetriever):
                     id SERIAL PRIMARY KEY,
                     hash char(32) UNIQUE,
                     content TEXT,
-                    metadata TEXT
+                    metadata JSONB
                 );""")
         
         # Create BM25 index
@@ -51,7 +51,7 @@ class PostgresBM25Retriever(BaseRetriever):
                         index_name => '{self.table_name}_bm25',
                         table_name => '{self.table_name}',
                         key_field => 'id',
-                        text_fields => paradedb.field('content') || paradedb.field('metadata')
+                        text_fields => paradedb.field('content')
                     );
                 END IF;
             END $$;
@@ -106,7 +106,7 @@ class PostgresBM25Retriever(BaseRetriever):
         
         results = self.cur.fetchall()
         
-        return [Document(page_content=content, metadata={**json.loads(metadata), 'id': id, 'relevance_score': score}) for id, content, metadata, score in results]
+        return [Document(page_content=content, metadata={**metadata, 'id': id, 'relevance_score': score}) for id, content, metadata, score in results]
 
     def delete(self, ids: List[str]) -> None:
         placeholders = ','.join(['%s'] * len(ids))
