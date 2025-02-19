@@ -3,16 +3,14 @@ package models
 import play.api.Configuration
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import play.db.NamedDatabase
-import slick.jdbc.{JdbcProfile, SQLiteProfile, PostgresProfile}
+import slick.jdbc.{JdbcProfile, PostgresProfile, SQLiteProfile}
 
 import javax.inject.{Inject, Singleton}
 
-case class ChatLog(
-  id: String, messageOffset: Int, text: String, role: String, reply: String,
-  documents: String, rewritten: Boolean, question: String, fetchedNewDocuments: Boolean
-)
+case class Chat(id: String, title: String, createdAt: Long)
+case class ChatMessage(chatId: String, messageOffset: Int, createdAt: Long, text: String, role: String, documents: String, rewritten: Boolean, fetchedNewDocuments: Boolean)
 case class Feedback(
-  chatId: String, messageOffset: Int, feedback: Boolean
+ chatId: String, messageOffset: Int, feedback: Boolean
 )
 
 @Singleton
@@ -28,27 +26,36 @@ class SQLTables @Inject() (@NamedDatabase("ragmeup") protected val dbConfigProvi
 
   import selectedProfile.api._
 
-  class ChatLogTable(tag: Tag) extends Table[ChatLog](tag, "chat_logs") {
-    def id = column[String]("id")
+  class ChatTable(tag: Tag) extends Table[Chat](tag, "chats") {
+    def id = column[String]("id", O.PrimaryKey)
+    def title = column[String]("title")
+    def createdAt = column[Long]("created_at")
+    def * = (id, title, createdAt) <> (Chat.tupled, Chat.unapply)
+  }
+
+  val Chats = TableQuery[ChatTable]
+
+  class ChatMessageTable(tag: Tag) extends Table[ChatMessage](tag, "chat_messages") {
+    def chatId = column[String]("chat_id")
     def messageOffset = column[Int]("message_offset")
+    def createdAt = column[Long]("created_at")
     def text = column[String]("text")
     def role = column[String]("role")
-    def reply = column[String]("reply")
     def documents = column[String]("documents")
     def rewritten = column[Boolean]("rewritten")
-    def question = column[String]("question")
     def fetchedNewDocuments = column[Boolean]("fetched_new_documents")
-
-    def * = (id, messageOffset, text, role, reply, documents, rewritten, question, fetchedNewDocuments).mapTo[ChatLog]
+    def * = (chatId, messageOffset, createdAt, text, role, documents, rewritten, fetchedNewDocuments) <> (ChatMessage.tupled, ChatMessage.unapply)
+    def chat = foreignKey("chat_fk", chatId, TableQuery[ChatTable])(_.id)
   }
-  val ChatLogs = TableQuery[ChatLogTable]
+
+  val ChatMessages = TableQuery[ChatMessageTable]
 
   class FeedbackTable(tag: Tag) extends Table[Feedback](tag, "feedback") {
-    def id = column[String]("chat_id")
+    def chatId = column[String]("chat_id")
     def messageOffset = column[Int]("message_offset")
     def feedback = column[Boolean]("feedback")
-
-    def * = (id, messageOffset, feedback).mapTo[Feedback]
+    def * = (chatId, messageOffset, feedback).mapTo[Feedback]
   }
+
   val Feedbacks = TableQuery[FeedbackTable]
 }

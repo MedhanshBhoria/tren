@@ -1,7 +1,7 @@
 package controllers
 
-import models.{ChatLog, Feedback}
-import models.daos.{ChatlogDAO, FeedbackDAO}
+import models._
+import models.daos._
 import org.apache.pekko.stream.scaladsl.{FileIO, Source}
 
 import javax.inject._
@@ -24,7 +24,7 @@ class HomeController @Inject()(
     cc: ControllerComponents,
     config: Configuration,
     ws: WSClient,
-    chatlogDAO: ChatlogDAO,
+    chatDAO: ChatDAO,
     feedbackDAO: FeedbackDAO
 ) (implicit ec: ExecutionContext) extends AbstractController(cc) {
 
@@ -49,6 +49,7 @@ class HomeController @Inject()(
     val docs = (json \ "docs").as[Seq[JsObject]]
     val chatId = (json \ "id").as[String]
     val messageOffset = (json \ "message_offset").as[Int]
+    val askTime = System.currentTimeMillis()
 
     ws
       .url(s"${config.get[String]("server_url")}/chat")
@@ -58,16 +59,40 @@ class HomeController @Inject()(
         "history" -> history,
         "docs" -> docs
       ))
-      .flatMap(response => {
-        val responseJson = response.json
-        chatlogDAO.addMessage(ChatLog(
-          chatId, messageOffset, query, "user", (responseJson \ "reply").as[String],
-          Json.stringify((responseJson \ "documents").as[JsValue]), (responseJson \ "rewritten").as[Boolean],
-          query, (responseJson \ "fetched_new_documents").as[Boolean]
-        )).map {_ =>
-          Ok(responseJson)
+      .flatMap(response =>
+        // Check if the chat exists
+        chatDAO.get(chatId).flatMap(_ match {
+          case Some(chat) => Future.successful(chat)
+          case None => {
+            // We need to create the chat but before doing so, we need a title that summarizes this
+            ws
+              .url(s"${config.get[String]("server_url")}/create_title")
+              .withRequestTimeout(5 minutes)
+              .post(Json.obj(
+                "question" -> query
+              ))
+              .flatMap(titleResponse => {
+                val title = (titleResponse.json.as[JsObject] \ "title").as[String]
+                chatDAO.add(Chat(
+                  chatId, title, System.currentTimeMillis()
+                ))
+              })
+          }
+        }).flatMap { chat =>
+          // Now insert the chat messages
+          for {
+            _ <- chatDAO.addChatMessage(
+              ChatMessage(chat.id, messageOffset, askTime, query, "user", Json.stringify(Json.arr()), false, false)
+            )
+            _ <- chatDAO.addChatMessage(
+              ChatMessage(chat.id, messageOffset + 1, System.currentTimeMillis(), (response.json.as[JsObject] \ "reply").as[String], "assistant",
+                Json.stringify((response.json.as[JsObject] \ "documents").as[JsValue]), (response.json.as[JsObject] \ "rewritten").as[Boolean], (response.json.as[JsObject] \ "fetched_new_documents").as[Boolean])
+            )
+          } yield {
+            Ok(response.json)
+          }
         }
-      })
+      )
   }
 
   def download(file: String) = Action.async { implicit request: Request[AnyContent] =>
@@ -167,6 +192,7 @@ class HomeController @Inject()(
 
   def feedback() = Action.async { implicit request: Request[AnyContent] =>
     val json = request.body.asJson.get.as[JsObject]
+    println("inserting feedback")
     feedbackDAO.add(Feedback(
       (json \ "chat_id").as[String],
       (json \ "message_offset").as[Int],

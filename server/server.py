@@ -233,6 +233,15 @@ def deepeval_evaluate():
 
     return jsonify({"evaluation_results": results})
 
+@app.route("/create_title", methods=['POST'])
+def create_title():
+    json_data = request.get_json()
+    question = json_data.get('question')
+
+    llm = raghelper.get_llm()
+    response = llm.invoke([{"role": "user", "content": f"Write a succinct title (few words) for a chat that has the question. {question}\n\nYou NEVER give explanations, only the title. You also stick to the language of the question."}])
+    
+    return jsonify({"title": response}), 200
 
 @app.route("/chat", methods=['POST'])
 def chat():
