@@ -240,6 +240,8 @@ def create_title():
 
     llm = raghelper.get_llm()
     response = llm.invoke([{"role": "user", "content": f"Write a succinct title (few words) for a chat that has the question. {question}\n\nYou NEVER give explanations, only the title. You also stick to the language of the question."}])
+    if isinstance(raghelper, RAGHelperCloud):
+        response = response.content
     
     return jsonify({"title": response}), 200
 
