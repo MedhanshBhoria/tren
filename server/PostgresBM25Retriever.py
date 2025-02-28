@@ -141,7 +141,7 @@ class PostgresBM25Retriever(BaseRetriever):
                         ORDER BY score_bm25 DESC
                         LIMIT %s;
                     """
-                cursor.execute(search_command, (query, self.k))
+                cursor.execute(search_command, (self.escape_query(query), self.k))
                 
                 results = cursor.fetchall()
                 
