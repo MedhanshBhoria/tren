@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS feedback (
     chat_id TEXT,
     message_offset INTEGER,
     feedback BOOLEAN,
+    feedback_text TEXT,
     FOREIGN KEY (chat_id, message_offset) REFERENCES chat_messages(chat_id, message_offset) ON DELETE CASCADE
 );
 

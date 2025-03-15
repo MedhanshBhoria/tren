@@ -10,7 +10,7 @@ import javax.inject.{Inject, Singleton}
 case class Chat(id: String, title: String, createdAt: Long)
 case class ChatMessage(chatId: String, messageOffset: Int, createdAt: Long, text: String, role: String, documents: String, rewritten: Boolean, fetchedNewDocuments: Boolean)
 case class Feedback(
- chatId: String, messageOffset: Int, feedback: Boolean
+ chatId: String, messageOffset: Int, feedback: Boolean, feedbackText: String
 )
 
 @Singleton
@@ -54,7 +54,8 @@ class SQLTables @Inject() (@NamedDatabase("ragmeup") protected val dbConfigProvi
     def chatId = column[String]("chat_id")
     def messageOffset = column[Int]("message_offset")
     def feedback = column[Boolean]("feedback")
-    def * = (chatId, messageOffset, feedback).mapTo[Feedback]
+    def feedbackText = column[String]("feedback_text")
+    def * = (chatId, messageOffset, feedback, feedbackText).mapTo[Feedback]
   }
 
   val Feedbacks = TableQuery[FeedbackTable]

@@ -196,7 +196,8 @@ class HomeController @Inject()(
     feedbackDAO.add(Feedback(
       (json \ "chat_id").as[String],
       (json \ "message_offset").as[Int],
-      (json \ "feedback").as[Boolean]
+      (json \ "feedback").as[Boolean],
+      (json \ "feedback_text").as[String]
     )).map {_ => Ok(Json.obj())}
   }
 }

@@ -36,6 +36,24 @@
   </div>
 </div>
 
+<div class="modal fade" id="feedbackModal" tabindex="-1" aria-labelledby="feedbackModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="feedbackModalLabel">Enter Feedback</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <textarea id="feedbackText" class="form-control" rows="3" placeholder="Enter your feedback here..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" id="submitFeedback">Submit Feedback</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
     function uuidv4() {
       return "10000000-1000-4000-8000-100000000000".replace(/[018]/g, c =>
@@ -93,34 +111,42 @@
 
           const currentOffset = messageOffset;
           function handleFeedback(feedbackType) {
-            $.post({
-              url: "@controllers.routes.HomeController.feedback()",
-              data: JSON.stringify({
-                chat_id: sessionid,
-                message_offset: currentOffset,
-                feedback: feedbackType === "positive",
-              }),
-              contentType: "application/json; charset=utf-8",
-              dataType: "json"
-            })
-            .done(function() {
-              // Display thank-you message
-              var message = $('<span style="margin-left: 10px; font-weight: bold; white-space: nowrap;">Thank you for your feedback!</span>');
-              feedbackRow.append($("<div class='col-md-1 offset-11 d-flex justify-content-end'>").append(message));
-
-              // Highlight the clicked button and disable both
-              if (feedbackType === "positive") {
-                // Disable both buttons highlighting the positive one
-                feedbackPos.css("pointer-events", "none").css("opacity", "0.8");
-                feedbackNeg.css("pointer-events", "none").css("opacity", "0.3");
-              } else {
-                // Disable both buttons highlighting the negative one
-                feedbackPos.css("pointer-events", "none").css("opacity", "0.3");
-                feedbackNeg.css("pointer-events", "none").css("opacity", "0.8");
+            $('#feedbackModal').modal('show');
+            $('#submitFeedback').off('click').on('click', function() {
+              var feedbackText = $('#feedbackText').val();
+              if (feedbackText.length < 10) {
+                alert("Feedback should be elaborate enough to use, please use at least 10 characters.");
+                return;
               }
-            })
-            .fail(function() {
-              alert("An error occurred. Please try again later.");
+              $.post({
+                url: "@controllers.routes.HomeController.feedback()",
+                data: JSON.stringify({
+                  chat_id: sessionid,
+                  message_offset: currentOffset,
+                  feedback: feedbackType === "positive",
+                  feedback_text: feedbackText
+                }),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json"
+              })
+              .done(function() {
+                $('#feedbackModal').modal('hide');
+                // Display thank-you message
+                var message = $('<span style="margin-left: 10px; font-weight: bold; white-space: nowrap;">Thank you for your feedback!</span>');
+                feedbackRow.append($("<div class='col-md-1 offset-11 d-flex justify-content-end'>").append(message));
+
+                // Highlight the clicked button and disable both
+                if (feedbackType === "positive") {
+                  feedbackPos.css("pointer-events", "none").css("opacity", "0.8");
+                  feedbackNeg.css("pointer-events", "none").css("opacity", "0.3");
+                } else {
+                  feedbackPos.css("pointer-events", "none").css("opacity", "0.3");
+                  feedbackNeg.css("pointer-events", "none").css("opacity", "0.8");
+                }
+              })
+              .fail(function() {
+                alert("An error occurred. Please try again later.");
+              });
             });
           }
           feedbackPos.on('click', function() { handleFeedback("positive"); });
