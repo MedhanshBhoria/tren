@@ -186,7 +186,7 @@ class RAGHelper:
         if not isinstance(docs, list):
             raise ValueError("Expected 'docs' to be a list.")
         if filters is None:
-            filters = ["source"]
+            return docs
         elif not isinstance(filters, list):
             raise ValueError("Expected 'filters' to be a list.")
 
@@ -447,7 +447,7 @@ class RAGHelper:
             table_name="sparse_vectors",
             k=self.vector_store_k,
         )
-        if self.vector_store_initial_load == "True":
+        if self.vector_store_initial_load:
             self.logger.info(
                 "Loading data from existing store into the PostgresBM25Retriever."
             )
