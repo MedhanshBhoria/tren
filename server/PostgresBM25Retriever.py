@@ -65,16 +65,11 @@ class PostgresBM25Retriever(BaseRetriever):
                             SELECT 1
                             FROM pg_class c
                             JOIN pg_namespace n ON n.oid = c.relnamespace
-                            WHERE c.relname = lower('{self.table_name}_bm25_bm25_index')
+                            WHERE c.relname = lower('{self.table_name}_bm25')
                             AND n.nspname = 'public'
                             AND c.relkind = 'i'
                         ) THEN
-                            CALL paradedb.create_bm25(
-                                index_name => '{self.table_name}_bm25',
-                                table_name => '{self.table_name}',
-                                key_field => 'id',
-                                text_fields => paradedb.field('content') || paradedb.field('metadata')
-                            );
+                            CREATE INDEX {self.table_name}_bm25 ON {self.table_name} USING bm25 (id, content, metadata) WITH (key_field='id');
                         END IF;
                     END $$;
                 """)
